@@ -210,6 +210,9 @@ fn main() {
                 let response_header = DnsPacketHeader {
                     id: 1234,
                     qr_indicator: 1,
+                    opcode: rec_header.opcode,
+                    recursion_desired: rec_header.recursion_desired,
+                    response_code: if rec_header.opcode == 0 { 0 } else { 4 },
                     question_count: rec_header.question_count,
                     answer_count: rec_header.question_count,
                     ..Default::default()
@@ -219,7 +222,7 @@ fn main() {
                 let response_header_raw = header_bytes.as_bytes();
                 let mut response: Vec<u8> = response_header_raw.to_vec();
 
-                if size > 12 {
+                if size > 12 && rec_header.opcode == 0 {
                     let question = Question::from(&buf[12..size]);
                     dbg!(&question);
                     let q_buf = question.to_byte_buffer();
