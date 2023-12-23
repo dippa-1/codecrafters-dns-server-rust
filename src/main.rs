@@ -96,6 +96,7 @@ fn u8_to_name(raw: &[u8]) -> String {
                 name += ".";
             }
             length = b;
+            segment_done = false;
             continue;
         }
         name += std::str::from_utf8(&[b]).unwrap();
