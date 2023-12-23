@@ -65,6 +65,7 @@ fn main() {
                 let tmp = response[0];
                 response[0] = response[1];
                 response[1] = tmp;
+                response[2] = response[2] << 7;
                 // response.append(&mut data);
 
                 let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
