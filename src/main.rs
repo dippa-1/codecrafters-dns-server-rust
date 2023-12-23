@@ -202,9 +202,6 @@ fn main() {
                 let mut tmp = [0; 12];
                 tmp.copy_from_slice(&buf[..12]);
 
-                // let mut data_len = size - 12;
-                // let mut data: Vec<u8> = buf[12..size].to_vec();
-
                 let rec_header = DnsPacketHeader::from_bytes(&buf[..12]);
 
                 let response_header = DnsPacketHeader {
