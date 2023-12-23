@@ -204,6 +204,7 @@ fn main() {
 
                 let rec_header = DnsPacketHeader::from_bytes(&buf[..12]);
 
+
                 let response_header = DnsPacketHeader {
                     id: rec_header.id,
                     qr_indicator: 1,
