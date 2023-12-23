@@ -142,7 +142,7 @@ fn main() {
 
                 let response_header = DnsPacketHeader {
                     id: 1234,
-                    qr_indicator: rec_header.qr_indicator,
+                    qr_indicator: 1,
                     question_count: rec_header.question_count,
                     ..Default::default()
                 };
