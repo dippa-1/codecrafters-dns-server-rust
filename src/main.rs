@@ -79,6 +79,17 @@ struct Question {
     class: u16,
 }
 
+impl Question {
+    fn to_byte_buffer(&self) -> ByteBuffer {
+        let mut buf = ByteBuffer::new();
+        buf.write_bytes(domain_to_byte_buffer(&self.name).as_bytes());
+        buf.write_u16(self.record_type);
+        buf.write_u16(self.class);
+
+        buf
+    }
+}
+
 fn u8_to_name(raw: &[u8]) -> String {
     let mut segment_done = true;
     let mut length = 0;
@@ -189,10 +200,9 @@ fn main() {
 
                 let mut tmp = [0; 12];
                 tmp.copy_from_slice(&buf[..12]);
-                // let received_header = DnsPacketHeader::from_bytes(tmp);
 
-                let mut data_len = size - 12;
-                let mut data: Vec<u8> = buf[12..size].to_vec();
+                // let mut data_len = size - 12;
+                // let mut data: Vec<u8> = buf[12..size].to_vec();
 
                 let rec_header = DnsPacketHeader::from_bytes(&buf[..12]);
 
@@ -211,7 +221,8 @@ fn main() {
                 if size > 12 {
                     let question = Question::from(&buf[12..size]);
                     dbg!(&question);
-                    response.append(&mut buf[12..size].to_vec());
+                    let q_buf = question.to_byte_buffer();
+                    response.append(&mut q_buf.as_bytes().to_vec());
 
                     let ip: [u8; 4] = [8,8,8,8];
                     let answer = Answer {
@@ -223,7 +234,7 @@ fn main() {
                         rdata: ip.to_vec(),
                     };
                     dbg!(&answer);
-                    let mut answer_buf = answer.to_byte_buffer();
+                    let answer_buf = answer.to_byte_buffer();
                     response.append(&mut answer_buf.as_bytes().to_vec());
                 }
 
