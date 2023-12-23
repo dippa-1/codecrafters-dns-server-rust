@@ -99,7 +99,7 @@ fn questions_from_raw(count: u16, raw: &[u8]) -> Vec<Question> {
         after_name = raw.position(|b| b == 0).and_then(|i| Some(i + 1)).unwrap();
         let record_type = ((raw[after_name] as u16) << 8) | (raw[after_name+1] as u16);
         after_name += 2;
-        let class = ((raw[after_name+2] as u16) << 8) | (raw[after_name+3] as u16);
+        let class = ((raw[after_name] as u16) << 8) | (raw[after_name+1] as u16);
         after_name += 2;
 
         questions.push(
