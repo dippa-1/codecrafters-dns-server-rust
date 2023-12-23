@@ -222,7 +222,7 @@ fn main() {
                         rdlength: 4,
                         rdata: ip.to_vec(),
                     };
-                    dbg!(&answer):
+                    dbg!(&answer);
                     let mut answer_buf = answer.to_byte_buffer();
                     response.append(&mut answer_buf.as_bytes().to_vec());
                 }
