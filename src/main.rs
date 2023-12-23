@@ -43,6 +43,10 @@ impl DnsPacketHeader {
     }
 }
 
+// fn parse_question(data: &str) -> Vec<String> {
+
+// }
+
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     println!("Logs from your program will appear here!");
@@ -67,21 +71,6 @@ fn main() {
 
                 let mut data_len = size - 12;
                 let mut data: Vec<u8> = buf[12..size].to_vec();
-
-                // let response_header = DnsPacketHeader::new()
-                //     .with_id(1234)
-                //     .with_qr_indicator(1)
-                //     .with_opcode(0)
-                //     .with_authorative_answer(0)
-                //     .with_truncation(0)
-                //     .with_recursion_desired(0)
-                //     .with_recursion_available(0)
-                //     .with_reserved(0)
-                //     .with_response_code(0)
-                //     .with_question_count(0)
-                //     .with_answer_count(0)
-                //     .with_authority_count(0)
-                //     .with_additional_count(0);
 
                 let response_header = DnsPacketHeader {
                     id: 1234,
