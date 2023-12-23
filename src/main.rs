@@ -32,7 +32,7 @@ fn main() {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                println!("{}", buf.iter().map(|b| format!("{0:02X}", b)).collect::<String>());
+                println!("{}", buf.iter().take(size).map(|b| format!("{0:02X}", b)).collect::<String>());
 
                 if size < 12 {
                     return;
@@ -62,7 +62,10 @@ fn main() {
 
                 let response_header_raw: [u8; 12] = response_header.into_bytes();
                 let mut response: Vec<u8> = response_header_raw.to_vec();
-                response.append(&mut data);
+                let tmp = response[0];
+                response[0] = response[1];
+                response[1] = tmp;
+                // response.append(&mut data);
 
                 let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
                 println!("Sending {hex_string}");
