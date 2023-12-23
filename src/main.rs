@@ -121,6 +121,7 @@ fn u8_to_name(raw: &[u8], offset: usize) -> String {
 
     let mut name = String::new();
     let mut i = 0;
+    let mut next_is_compressed = false;
     dbg!(&raw);
     for &b in raw.slice(offset..raw.len()) {
         i += 1;
@@ -135,13 +136,17 @@ fn u8_to_name(raw: &[u8], offset: usize) -> String {
             segment_done = false;
             continue;
         }
-        if b >> 6 == 0b11 {
-            // pointer to a previous label
+        if next_is_compressed {
+            next_is_compressed = false;
             let referenced_name = u8_to_name(raw, (b as usize & 0b0011_1111) - 12);
             name += referenced_name.as_str();
-            break;
         }
-        name += std::str::from_utf8(&[b]).unwrap();
+        else if b >> 6 == 0b11 {
+            // pointer to a previous label
+            next_is_compressed = true;
+        } else {
+            name += std::str::from_utf8(&[b]).unwrap();
+        }
         length -= 1;
         segment_done = length == 0;
     }
