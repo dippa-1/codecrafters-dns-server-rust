@@ -85,6 +85,7 @@ fn u8_to_name(raw: &[u8]) -> String {
 
     let mut name = String::new();
     let mut i = 0;
+    println!("raw: {:?}", raw);
     for &b in raw {
         i += 1;
         if b == 0 {
