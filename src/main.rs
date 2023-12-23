@@ -4,7 +4,7 @@ use std::{net::UdpSocket, ops::Index, io::Write};
 use bytebuffer::ByteBuffer;
 use nom::{FindSubstring, InputIter, AsBytes};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct DnsPacketHeader {
     id: u16,
     qr_indicator: u8,
@@ -203,6 +203,7 @@ fn main() {
                 tmp.copy_from_slice(&buf[..12]);
 
                 let rec_header = DnsPacketHeader::from_bytes(&buf[..12]);
+                dbg!(&rec_header);
 
 
                 let response_header = DnsPacketHeader {
