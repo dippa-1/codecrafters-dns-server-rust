@@ -143,6 +143,9 @@ fn u8_to_name(raw: &[u8], offset: usize) -> String {
             let offset = b as usize - 12;
             let referenced_name = u8_to_name(raw, offset);
             println!("Appending compressed name {referenced_name} with offset {offset}");
+            if name.len() > 0 {
+                name += ".";
+            }
             name += referenced_name.as_str();
         }
         else if b >> 6 == 0b11 {
