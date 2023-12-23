@@ -41,11 +41,77 @@ impl DnsPacketHeader {
 
         buf
     }
+
+    fn from_bytes(data: &[u8]) -> Self {
+        let mut buf = ByteBuffer::from(data);
+
+        let id = buf.read_u16().unwrap();
+        let flags1 = buf.read_u8().unwrap();
+        let flags2 = buf.read_u8().unwrap();
+        let qc = buf.read_u16().unwrap();
+        let anc = buf.read_u16().unwrap();
+        let auc = buf.read_u16().unwrap();
+        let adc = buf.read_u16().unwrap();
+
+        Self {
+            id,
+            qr_indicator: flags1 >> 7,
+            opcode: (flags1 >> 3) & 0b1111,
+            authorative_answer: (flags1 >> 2) & 1,
+            truncation: (flags1 >> 1) & 1,
+            recursion_desired: flags1 & 1,
+            recursion_available: flags2 >> 7,
+            reserved: (flags2 >> 4) & 0b111,
+            response_code: flags2 & 0b1111,
+            question_count: qc,
+            answer_count: anc,
+            authority_count: auc,
+            additional_count: adc,
+        }
+    }
 }
 
-// fn parse_question(data: &str) -> Vec<String> {
+#[derive(Default, Debug)]
+struct Question {
+    name: String,
+    record_type: u16,
+    class: u16,
+}
 
-// }
+impl From<&[u8]> for Question {
+    fn from(value: &[u8]) -> Self {
+        let mut segment_done = true;
+        let mut length = 0;
+
+        let mut name = String::new();
+        let mut i = 0;
+        for &b in value {
+            i += 1;
+            if b == 0 {
+                break;
+            }
+            if segment_done {
+                if !name.is_empty() {
+                    name += ".";
+                }
+                length = b;
+                continue;
+            }
+            name += std::str::from_utf8(&[b]).unwrap();
+            length -= 1;
+            segment_done = length == 0;
+        }
+        let record_type = ((value[i] as u16) << 8) | (value[i+1] as u16);
+        let class = ((value[i+2] as u16) << 8) | (value[i+3] as u16);
+
+        Self {
+            name,
+            record_type,
+            class,
+        }
+    }
+}
+
 
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -72,15 +138,24 @@ fn main() {
                 let mut data_len = size - 12;
                 let mut data: Vec<u8> = buf[12..size].to_vec();
 
+                let rec_header = DnsPacketHeader::from_bytes(&buf[..12]);
+
                 let response_header = DnsPacketHeader {
                     id: 1234,
-                    qr_indicator: 1,
+                    qr_indicator: rec_header.qr_indicator,
+                    question_count: rec_header.question_count,
                     ..Default::default()
                 };
 
                 let header_bytes = response_header.to_bytes();
                 let response_header_raw = header_bytes.as_bytes();
                 let mut response: Vec<u8> = response_header_raw.to_vec();
+
+                if size > 12 {
+                    let question = Question::from(&buf[12..size]);
+                    dbg!(&question);
+                    response.append(&mut buf[12..size].to_vec());
+                }
 
                 let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
                 println!("Sending {hex_string}");
