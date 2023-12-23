@@ -144,7 +144,7 @@ fn domain_to_byte_buffer(domain: &str) -> ByteBuffer {
     buf
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Answer {
     name: String,
     record_type: u16,
@@ -222,6 +222,7 @@ fn main() {
                         rdlength: 4,
                         rdata: ip.to_vec(),
                     };
+                    dbg!(&answer):
                     let mut answer_buf = answer.to_byte_buffer();
                     response.append(&mut answer_buf.as_bytes().to_vec());
                 }
