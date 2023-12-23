@@ -1,8 +1,9 @@
 // Uncomment this block to pass the first stage
-use std::{net::UdpSocket, ops::Index, io::Write};
+use std::{net::{UdpSocket, Ipv4Addr, SocketAddr}, cmp::Ordering};
 
 use bytebuffer::ByteBuffer;
-use nom::{FindSubstring, InputIter, AsBytes, Slice};
+use clap::Parser;
+use nom::{InputIter, AsBytes, Slice};
 
 #[derive(Default, Debug)]
 struct DnsPacketHeader {
@@ -223,20 +224,55 @@ impl Answer {
     }
 }
 
+#[derive(Parser)]
+struct Args {
+    #[arg(long)]
+    resolver: String,
+}
+
+struct Resolver {
+    ip: Ipv4Addr,
+    port: u16,
+}
+
+impl From<&str> for Resolver {
+    fn from(value: &str) -> Self {
+        let mut parts = value.split(':').into_iter();
+        let ip = parts.next().unwrap().parse::<Ipv4Addr>().expect("Enter an ip4");
+        let port = parts.next().unwrap().parse().unwrap();
+
+        Self {
+            ip,
+            port,
+        }
+    }
+}
+
 
 fn main() {
+    let args = Args::parse();
+    println!("Resolver: {}", args.resolver);
+    let resolver = Resolver::from(args.resolver.as_str());
+
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     println!("Logs from your program will appear here!");
 
     // Uncomment this block to pass the first stage
     let udp_socket = UdpSocket::bind("127.0.0.1:2053").expect("Failed to bind to address");
     let mut buf = [0; 512];
+
+    let resolver_addr = SocketAddr::from((resolver.ip, resolver.port));
+    udp_socket.connect(resolver_addr).expect("Failed to connect to resolver.");
     
     loop {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
                 println!("{}", buf.iter().take(size).map(|b| format!("{0:02X}", b)).collect::<String>());
+                if source.cmp(&resolver_addr) == Ordering::Equal {
+                    println!("Got data from resolver!");
+                    return;
+                }
 
                 if size < 12 {
                     return;
