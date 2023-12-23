@@ -151,6 +151,7 @@ fn domain_to_byte_buffer(domain: &str) -> ByteBuffer {
         buf
     }).unwrap();
     buf.write_u8(0);
+    dbg!(&buf);
 
     buf
 }
