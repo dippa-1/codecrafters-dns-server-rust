@@ -129,7 +129,7 @@ fn u8_to_name(raw: &[u8], offset: usize) -> String {
         if b == 0 {
             break;
         }
-        if segment_done {
+        if segment_done && (b >> 6 != 0b11) {
             if !name.is_empty() {
                 name += ".";
             }
