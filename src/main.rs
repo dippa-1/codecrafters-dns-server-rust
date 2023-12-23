@@ -142,7 +142,7 @@ fn domain_to_byte_buffer(domain: &str) -> ByteBuffer {
 
         let mut buf = ByteBuffer::new();
         buf.write_u8(len);
-        buf.write_string(label);
+        buf.write_bytes(label.as_bytes());
 
         Some(buf)
     }).reduce(|acc, e| {
