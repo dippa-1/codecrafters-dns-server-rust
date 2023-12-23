@@ -2,7 +2,7 @@
 use std::{net::UdpSocket, ops::Index, io::Write};
 
 use bytebuffer::ByteBuffer;
-use nom::{FindSubstring, InputIter, AsBytes};
+use nom::{FindSubstring, InputIter, AsBytes, Slice};
 
 #[derive(Default, Debug)]
 struct DnsPacketHeader {
@@ -90,14 +90,39 @@ impl Question {
     }
 }
 
-fn u8_to_name(raw: &[u8]) -> String {
+fn questions_from_raw(count: u8, raw: &[u8]) -> Vec<Question> {
+    let mut questions = vec![];
+
+    let mut after_name = 0;
+    for _ in 0..count {
+        let name = u8_to_name(raw, after_name);
+        after_name = raw.position(|b| b == 0).and_then(|i| Some(i + 1)).unwrap();
+        let record_type = ((raw[after_name] as u16) << 8) | (raw[after_name+1] as u16);
+        after_name += 2;
+        let class = ((raw[after_name+2] as u16) << 8) | (raw[after_name+3] as u16);
+        after_name += 2;
+
+        questions.push(
+            Question {
+                name,
+                record_type,
+                class,
+            },
+        );
+
+    }
+
+    questions
+}
+
+fn u8_to_name(raw: &[u8], offset: usize) -> String {
     let mut segment_done = true;
     let mut length = 0;
 
     let mut name = String::new();
     let mut i = 0;
     dbg!(&raw);
-    for &b in raw {
+    for &b in raw.slice(offset..raw.len()) {
         i += 1;
         if b == 0 {
             break;
@@ -110,6 +135,12 @@ fn u8_to_name(raw: &[u8]) -> String {
             segment_done = false;
             continue;
         }
+        if b >> 6 == 0b11 {
+            // pointer to a previous label
+            let referenced_name = u8_to_name(raw, 12 + (b as usize & 0b0011_1111));
+            name += referenced_name.as_str();
+            break;
+        }
         name += std::str::from_utf8(&[b]).unwrap();
         length -= 1;
         segment_done = length == 0;
@@ -120,7 +151,7 @@ fn u8_to_name(raw: &[u8]) -> String {
 
 impl From<&[u8]> for Question {
     fn from(value: &[u8]) -> Self {
-        let name = u8_to_name(value);
+        let name = u8_to_name(value, 0);
         let after_name = value.position(|b| b == 0).and_then(|i| Some(i + 1)).unwrap();
         let record_type = ((value[after_name] as u16) << 8) | (value[after_name+1] as u16);
         let class = ((value[after_name+2] as u16) << 8) | (value[after_name+3] as u16);
@@ -222,23 +253,25 @@ fn main() {
                 let mut response: Vec<u8> = response_header_raw.to_vec();
 
                 if size > 12 && rec_header.opcode == 0 {
-                    let question = Question::from(&buf[12..size]);
-                    dbg!(&question);
-                    let q_buf = question.to_byte_buffer();
-                    response.append(&mut q_buf.as_bytes().to_vec());
+                    for _ in 0..rec_header.question_count {
+                        let question = Question::from(&buf[12..size]);
+                        dbg!(&question);
+                        let q_buf = question.to_byte_buffer();
+                        response.append(&mut q_buf.as_bytes().to_vec());
 
-                    let ip: [u8; 4] = [8,8,8,8];
-                    let answer = Answer {
-                        name: question.name.clone(),
-                        record_type: question.record_type,
-                        class: question.class,
-                        ttl: 60,
-                        rdlength: 4,
-                        rdata: ip.to_vec(),
-                    };
-                    dbg!(&answer);
-                    let answer_buf = answer.to_byte_buffer();
-                    response.append(&mut answer_buf.as_bytes().to_vec());
+                        let ip: [u8; 4] = [8,8,8,8];
+                        let answer = Answer {
+                            name: question.name.clone(),
+                            record_type: question.record_type,
+                            class: question.class,
+                            ttl: 60,
+                            rdlength: 4,
+                            rdata: ip.to_vec(),
+                        };
+                        dbg!(&answer);
+                        let answer_buf = answer.to_byte_buffer();
+                        response.append(&mut answer_buf.as_bytes().to_vec());
+                    }
                 }
 
                 let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
