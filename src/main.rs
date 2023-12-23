@@ -32,7 +32,7 @@ fn main() {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                println!("{}", std::str::from_utf8(&buf).unwrap().trim_end());
+                println!("{}", buf.iter().map(|b| format!("{0:02X}", b)).collect::<String>());
 
                 if size < 12 {
                     return;
