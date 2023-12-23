@@ -33,6 +33,18 @@ fn main() {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
                 println!("{}", std::str::from_utf8(&buf).unwrap().trim_end());
+
+                if size < 12 {
+                    return;
+                }
+
+                let mut tmp = [0; 12];
+                tmp.copy_from_slice(&buf[..12]);
+                let received_header = DnsPacketHeader::from_bytes(tmp);
+
+                let mut data_len = size - 12;
+                let mut data: Vec<u8> = buf[12..size].to_vec();
+
                 let response_header = DnsPacketHeader::new()
                     .with_id(1234)
                     .with_qr_indicator(1)
@@ -48,7 +60,10 @@ fn main() {
                     .with_authority_count(0)
                     .with_additional_count(0);
 
-                let response: [u8; 12] = response_header.into_bytes();
+                let response_header_raw: [u8; 12] = response_header.into_bytes();
+                let mut response: Vec<u8> = response_header_raw.to_vec();
+                response.append(&mut data);
+
                 let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
                 println!("Sending {hex_string}");
                 udp_socket
