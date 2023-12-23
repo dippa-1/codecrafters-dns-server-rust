@@ -1,6 +1,25 @@
 // Uncomment this block to pass the first stage
 use std::net::UdpSocket;
 
+use modular_bitfield::{bitfield, specifiers::*};
+
+#[bitfield]
+struct DnsPacketHeader {
+    id: B16,
+    qr_indicator: B1,
+    opcode: B4,
+    authorative_answer: B1,
+    truncation: B1,
+    recursion_desired: B1,
+    recursion_available: B1,
+    reserved: B3,
+    response_code: B4,
+    question_count: B16,
+    answer_count: B16,
+    authority_count: B16,
+    additional_count: B16,
+}
+
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     println!("Logs from your program will appear here!");
@@ -13,7 +32,25 @@ fn main() {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                let response = [];
+                println!("{}", std::str::from_utf8(&buf).unwrap().trim_end());
+                let response_header = DnsPacketHeader::new()
+                    .with_id(1234)
+                    .with_qr_indicator(1)
+                    .with_opcode(0)
+                    .with_authorative_answer(0)
+                    .with_truncation(0)
+                    .with_recursion_desired(0)
+                    .with_recursion_available(0)
+                    .with_reserved(0)
+                    .with_response_code(0)
+                    .with_question_count(0)
+                    .with_answer_count(0)
+                    .with_authority_count(0)
+                    .with_additional_count(0);
+
+                let response: [u8; 12] = response_header.into_bytes();
+                let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
+                println!("Sending {hex_string}");
                 udp_socket
                     .send_to(&response, source)
                     .expect("Failed to send response");
