@@ -90,7 +90,7 @@ impl Question {
     }
 }
 
-fn questions_from_raw(count: u8, raw: &[u8]) -> Vec<Question> {
+fn questions_from_raw(count: u16, raw: &[u8]) -> Vec<Question> {
     let mut questions = vec![];
 
     let mut after_name = 0;
@@ -137,7 +137,7 @@ fn u8_to_name(raw: &[u8], offset: usize) -> String {
         }
         if b >> 6 == 0b11 {
             // pointer to a previous label
-            let referenced_name = u8_to_name(raw, 12 + (b as usize & 0b0011_1111));
+            let referenced_name = u8_to_name(raw, (b as usize & 0b0011_1111) - 12);
             name += referenced_name.as_str();
             break;
         }
@@ -253,8 +253,8 @@ fn main() {
                 let mut response: Vec<u8> = response_header_raw.to_vec();
 
                 if size > 12 && rec_header.opcode == 0 {
-                    for _ in 0..rec_header.question_count {
-                        let question = Question::from(&buf[12..size]);
+                    let questions = questions_from_raw(rec_header.question_count, &buf[12..size]);
+                    for question in questions {
                         dbg!(&question);
                         let q_buf = question.to_byte_buffer();
                         response.append(&mut q_buf.as_bytes().to_vec());
