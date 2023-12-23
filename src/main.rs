@@ -266,6 +266,7 @@ fn main() {
 
                 if size > 12 && rec_header.opcode == 0 {
                     let questions = questions_from_raw(rec_header.question_count, &buf[12..size]);
+                    let mut answers = vec![];
                     for question in questions {
                         dbg!(&question);
                         let q_buf = question.to_byte_buffer();
@@ -282,7 +283,10 @@ fn main() {
                         };
                         dbg!(&answer);
                         let answer_buf = answer.to_byte_buffer();
-                        response.append(&mut answer_buf.as_bytes().to_vec());
+                        answers.push(answer_buf);
+                    }
+                    for a in answers {
+                        response.append(&mut a.as_bytes().to_vec());
                     }
                 }
 
