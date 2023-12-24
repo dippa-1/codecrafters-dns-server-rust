@@ -324,6 +324,15 @@ fn main() {
                         let mut req_for_resolver: Vec<u8> = req_header_resolver.to_vec();
                         req_for_resolver.append(&mut q_buf.as_bytes().to_vec());
                         let mut resolver_buf = [0; 512];
+                        let hex_string: String = response.iter().map(|b| format!("{0:02X}", b)).collect();
+                        println!("Sending to resolver: {hex_string}");
+                        match resolver_socket.send(&req_for_resolver) {
+                            Ok(size) => println!("Sent {} bytes to resolver", size),
+                            Err(e) => {
+                                eprintln!("Error sending data to resolver, {}", e);
+                                break 'main;
+                            }
+                        }
                         match resolver_socket.recv_from(&mut resolver_buf) {
                             Ok((size, source)) => {
                                 println!("Got {} bytes from resolver {}", size, source);
