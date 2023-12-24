@@ -315,7 +315,6 @@ fn main() {
                 if size > 12 && rec_header.opcode == 0 {
                     let questions = questions_from_raw(rec_header.question_count, &buf[12..size]);
                     let mut answers = vec![];
-                    // todo: split into multiple messages; make a request to resolver for each message
                     for question in questions {
                         dbg!(&question);
                         let q_buf = question.to_byte_buffer();
@@ -333,28 +332,32 @@ fn main() {
                                 break 'main;
                             }
                         }
-                        match resolver_socket.recv_from(&mut resolver_buf) {
+                        let answer_raw = match resolver_socket.recv_from(&mut resolver_buf) {
                             Ok((size, source)) => {
                                 println!("Got {} bytes from resolver {}", size, source);
+                                let req_len = req_for_resolver.len();
+                                &resolver_buf[req_len..(req_len+size)]
                             },
                             Err(e) => {
                                 eprintln!("Error receiving data: {}", e);
                                 break 'main;
                             }
-                        }
-
-                        let ip: [u8; 4] = [8,8,8,8];
-                        let answer = Answer {
-                            name: question.name.clone(),
-                            record_type: question.record_type,
-                            class: question.class,
-                            ttl: 60,
-                            rdlength: 4,
-                            rdata: ip.to_vec(),
                         };
-                        dbg!(&answer);
-                        let answer_buf = answer.to_byte_buffer();
-                        answers.push(answer_buf);
+                        answers.push(answer_raw.to_vec())
+
+                        // without custom resolver:
+                        // let ip: [u8; 4] = [8,8,8,8];
+                        // let answer = Answer {
+                        //     name: question.name.clone(),
+                        //     record_type: question.record_type,
+                        //     class: question.class,
+                        //     ttl: 60,
+                        //     rdlength: 4,
+                        //     rdata: ip.to_vec(),
+                        // };
+                        // dbg!(&answer);
+                        // let answer_buf = answer.to_byte_buffer();
+                        // answers.push(answer_buf);
 
                     }
                     for a in answers {
