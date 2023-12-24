@@ -71,6 +71,12 @@ impl DnsPacketHeader {
             additional_count: adc,
         }
     }
+
+    fn to_vec(&self) -> Vec<u8> {
+        let header_bytes = self.to_bytes();
+        let response_header_raw = header_bytes.as_bytes();
+        response_header_raw.to_vec()
+    }
 }
 
 #[derive(Default, Debug)]
@@ -262,9 +268,10 @@ fn main() {
     let mut buf = [0; 512];
 
     let resolver_addr = SocketAddr::from((resolver.ip, resolver.port));
-    udp_socket.connect(resolver_addr).expect("Failed to connect to resolver.");
+    let resolver_socket = UdpSocket::bind(SocketAddr::from(([127, 0, 0, 1], 2054))).expect("Failed to bind second address for resolver.");
+    resolver_socket.connect(resolver_addr).expect("Failed to connect to resolver.");
     
-    loop {
+    'main: loop {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
@@ -284,7 +291,6 @@ fn main() {
                 let rec_header = DnsPacketHeader::from_bytes(&buf[..12]);
                 dbg!(&rec_header);
 
-
                 let response_header = DnsPacketHeader {
                     id: rec_header.id,
                     qr_indicator: 1,
@@ -295,18 +301,38 @@ fn main() {
                     answer_count: rec_header.question_count,
                     ..Default::default()
                 };
+                let mut response: Vec<u8> = response_header.to_vec();
 
-                let header_bytes = response_header.to_bytes();
-                let response_header_raw = header_bytes.as_bytes();
-                let mut response: Vec<u8> = response_header_raw.to_vec();
+                let req_header_resolver = DnsPacketHeader {
+                    id: rec_header.id,
+                    opcode: rec_header.opcode,
+                    recursion_desired: rec_header.recursion_desired,
+                    response_code: if rec_header.opcode == 0 { 0 } else { 4 },
+                    question_count: if rec_header.question_count > 0 { 1 } else { 0 },
+                    ..Default::default()
+                };
 
                 if size > 12 && rec_header.opcode == 0 {
                     let questions = questions_from_raw(rec_header.question_count, &buf[12..size]);
                     let mut answers = vec![];
+                    // todo: split into multiple messages; make a request to resolver for each message
                     for question in questions {
                         dbg!(&question);
                         let q_buf = question.to_byte_buffer();
                         response.append(&mut q_buf.as_bytes().to_vec());
+
+                        let mut req_for_resolver: Vec<u8> = req_header_resolver.to_vec();
+                        req_for_resolver.append(&mut q_buf.as_bytes().to_vec());
+                        let mut resolver_buf = [0; 512];
+                        match resolver_socket.recv_from(&mut resolver_buf) {
+                            Ok((size, source)) => {
+                                println!("Got {} bytes from resolver {}", size, source);
+                            },
+                            Err(e) => {
+                                eprintln!("Error receiving data: {}", e);
+                                break 'main;
+                            }
+                        }
 
                         let ip: [u8; 4] = [8,8,8,8];
                         let answer = Answer {
@@ -320,6 +346,7 @@ fn main() {
                         dbg!(&answer);
                         let answer_buf = answer.to_byte_buffer();
                         answers.push(answer_buf);
+
                     }
                     for a in answers {
                         response.append(&mut a.as_bytes().to_vec());
@@ -336,6 +363,6 @@ fn main() {
                 eprintln!("Error receiving data: {}", e);
                 break;
             }
-        }
+        };
     }
 }
